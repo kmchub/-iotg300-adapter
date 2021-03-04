@@ -1,0 +1,35 @@
+{
+  "name": "iotg300-adapter",
+  "display_name": "IOTG300",
+  "version": "0.0.1",
+  "description": "IOTG300 gateway support",
+  "author": "Hitpoint",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "homepage": "https://github.com/kmchub/iotg300-adapter#readme",
+  "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kmchub/iotg300-adapter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kmchub/iotg300-adapter/issues"
+  },
+  "devDependencies": {
+    "babel-eslint": "^10.1.0",
+    "eslint": "^7.10.0"
+  },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "SHA256SUMS",
+    "css",
+    "iotg300-adapter.js",
+    "index.js",
+    "js",
+    "manifest.json",
+    "views"
+  ]
+}
