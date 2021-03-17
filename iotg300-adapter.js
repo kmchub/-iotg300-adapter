@@ -47,15 +47,16 @@ class Iotg300Property extends Property {
     return new Promise((resolve, reject) => {
       super.setValue(value).then((updatedValue) => {
         resolve(updatedValue);
-        this.device.notifyPropertyChanged(this);
+//        this.device.notifyPropertyChanged(this);
       }).catch((err) => {
         reject(err);
       });
     });
   }
   updateValue(value) {
-    this.setCachedValue(value);
-    this.device.notifyPropertyChanged(this);
+//    this.setCachedValue(value);
+//    this.device.notifyPropertyChanged(this);
+    this.setCachedValueAndNotify(value);
   }
 }
 
@@ -63,10 +64,10 @@ class BatteryDevice extends Device {
   constructor(adapter) {
     super(adapter, 'battery');
     this.name = 'Battery';
-    this.type = 'integer',
     this.description = "Battery information";
     this['@context'] = 'https://iot.mozilla.org/schemas/';
-    this['@type'] = ['MultiLevelSensor'];
+    this['@type'] = ['MultiLevelSensor', 'ColorControl'];
+    this.type = 'integer',
     this.adc = this.createProperty('ADC', {
       type: 'integer',
       title: 'ADC',
@@ -86,7 +87,6 @@ class BatteryDevice extends Device {
       readOnly: true
     });
     this.voltage = this.createProperty('Voltage', {
-      '@type': 'VoltageProperty',
       type: 'number',
       unit: 'volt',
       title: 'Voltage',
@@ -114,7 +114,7 @@ class BatteryDevice extends Device {
   poll() {
     return __awaiter(this, void 0, void 0, function* () {
       const adc = yield si.BatteryADC();
-      const state = yield si.BatteryState();
+      const state = yield si.ProcRead('CPU_BAT_STATE');
       let color = "#000000";
       if(      state == 0 ) {
         color = "#00FF00";  // ready
@@ -132,7 +132,7 @@ class BatteryDevice extends Device {
       this.voltage.updateValue( this.BatteryVoltage(adc) );
 
 /* 上面是有 iotg_pm 的做法，下面做法比較直接
-      const adc = yield si.BatteryProcADC();
+      const adc = yield si.ProcRead('adc');
       this.adc.updateValue( adc );
       this.level.updateValue( yield si.BatteryLevelPM() );
       this.state.updateValue( yield si.BatteryState() );
@@ -147,28 +147,71 @@ class BatteryDevice extends Device {
     this.properties.set(name, property);
     return property;
   }
-  startPolling(interval) {
+  startPolling(interval) {    // 不顯示時  要停止才對 !!!!!!!!!!!!!
     this.poll();
     setInterval(() => {
         this.poll();
     }, interval * 1000);
+  }
+  addActions(actions) {
+    for (const actionName in actions) {
+      this.addAction(actionName, actions[actionName]);
+    }
+  }
+  addEvents(events) {
+    for (const eventName in events) {
+      this.addEvent(eventName, events[eventName]);
+    }
+  }
+}
+
+class Device4G extends Device {
+  constructor(adapter) {
+    super(adapter, 'device4g');
+    this.name = '4G Module';
+    this.description = "4G device information";
+    this['@context'] = 'https://iot.mozilla.org/schemas/';
+    this['@type'] = ['OnOffSwitch'];
+    this.type = 'boolean',
+    this.power = this.createProperty('Power', {
+      '@type': 'OnOffProperty',
+      label: 'On/Off',
+      name: 'power',
+      type: 'boolean',
+      value: false,
+      readOnly: false
+    });
+  }
+  updateState() {
+    return __awaiter(this, void 0, void 0, function* () {
+      this.power.updateValue( yield si.ProcRead('CPU_PW_4G') );
+    });
+  }
+  createProperty(name, description) {
+    const property = new Iotg300Property(this, name, description);
+    this.properties.set(name, property);
+    return property;
+  }
+  notifyPropertyChanged(property) {
+    super.notifyPropertyChanged(property);
+    // yield si.ProcWrite('CPU_PW_4G', property.getValue() );   Promise { false }
   }
 }
 
 class Iotg300Adapter extends Adapter {
   constructor(addonManager) {
     super(addonManager, 'Iotg300Adapter', manifest.id);
+
     addonManager.addAdapter(this);
 
-    const db = new Database(manifest.id);
+    const db = new Database(this.packageName);
     db.open().then(() => {
       return db.loadConfig();
     }).then((config) => {
-      const pollInterval = config.pollInterval || 1;
-  
-      const battery = new BatteryDevice(this);
-      this.handleDeviceAdded(battery);
-      battery.startPolling(pollInterval);
+      this.pollInterval = config.pollInterval || 5;
+    }).then(() => {
+      this.addAllThings();
+      this.unloading = false;
     }).catch(console.error);
   }
 
@@ -181,7 +224,7 @@ class Iotg300Adapter extends Adapter {
    * @param {String} deviceDescription Description of the device to add.
    * @return {Promise} which resolves to the device added.
    */
-  /* remove
+  /*
   addDevice(deviceId, deviceDescription) {
     return new Promise((resolve, reject) => {
       if (deviceId in this.devices) {
@@ -214,25 +257,34 @@ class Iotg300Adapter extends Adapter {
     });
   }
 
+  addAllThings() {
+    const battery = new BatteryDevice(this);
+    this.handleDeviceAdded(battery);
+    battery.startPolling(this.pollInterval);
+/*
+    const dev4g = new Device4G(this);
+    this.handleDeviceAdded(dev4g);
+    dev4g.updateState(); */
+  }
+
   /**
    * Start the pairing/discovery process.
    *
    * @param {Number} timeoutSeconds Number of seconds to run before timeout
    */
-  /* remove
   startPairing(_timeoutSeconds) {
-    console.log('Iotg300Adapter:', this.name,
-                'id', this.id, 'pairing started');
-  } */
+    // console.log('Iotg300Adapter:', this.name,
+    //             'id', this.id, 'pairing started');
+    this.addAllThings();
+  }
 
   /**
    * Cancel the pairing/discovery process.
    */
-  /* remove
   cancelPairing() {
-    console.log('Iotg300Adapter:', this.name, 'id', this.id,
-                'pairing cancelled');
-  } */
+    // console.log('Iotg300Adapter:', this.name, 'id', this.id,
+    //             'pairing cancelled');
+  }
 
   /**
    * Unpair the provided the device from the adapter.
@@ -242,10 +294,8 @@ class Iotg300Adapter extends Adapter {
   removeThing(device) {
     // console.log('Iotg300Adapter:', this.name, 'id', this.id,
     //            'removeThing(', device.id, ') started');
-    console.log('Iotg300Adapter:', 'removeThing:', device.id, 'started');
-
     this.removeDevice(device.id).then(() => {
-      console.log('Iotg300Adapter: device:', device.id, 'was unpaired.');
+      // console.log('Iotg300Adapter: device:', device.id, 'was unpaired.');
     }).catch((err) => {
       console.error('Iotg300Adapter: unpairing', device.id, 'failed');
       console.error(err);
@@ -258,8 +308,8 @@ class Iotg300Adapter extends Adapter {
    * @param {Object} device Device that is currently being paired
    */
   cancelRemoveThing(device) {
-    console.log('Iotg300Adapter:', this.name, 'id', this.id,
-                'cancelRemoveThing(', device.id, ')');
+    // console.log('Iotg300Adapter:', this.name, 'id', this.id,
+    //            'cancelRemoveThing(', device.id, ')');
   }
 }
 

@@ -25,7 +25,7 @@
   "manifest_version": 1,
   "name": "IOTG300",
   "short_name": "iotg300",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "web_accessible_resources": [
     "css/*.css",
     "js/*.js",
@@ -33,7 +33,7 @@
   ],
   "options": {
     "default": {
-      "pollInterval": 1
+      "pollInterval": 5
     },
     "schema": {
       "type": "object",

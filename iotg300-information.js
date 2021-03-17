@@ -26,21 +26,6 @@ function BatteryADC(callback) {
     });
 }
 
-function BatteryProcADC(callback) {
-    return new Promise((resolve) => {
-        process.nextTick(() => {
-            let result = 0;
-            fs.readFile('/proc/iotg300/adc', function (error, stdout) {
-                if (!error) {
-                    result = parseInt(stdout.toString(), 10);
-                }
-                if (callback) { callback(result); }
-                resolve(result);
-            });
-        });
-    });
-}
-
 function BatteryLevel(callback) {
     return new Promise((resolve) => {
         process.nextTick(() => {
@@ -71,11 +56,11 @@ function BatteryLevelPM(callback) {
     });
 }
 
-function BatteryState(callback) {
+function ProcRead(name, callback) {
     return new Promise((resolve) => {
         process.nextTick(() => {
             let result = 0;
-            fs.readFile('/proc/iotg300/CPU_BAT_STATE', function (error, stdout) {
+            fs.readFile('/proc/iotg300/' + name, function (error, stdout) {
                 if (!error) {
                     result = parseInt(stdout.toString(), 10);
                 }
@@ -87,7 +72,6 @@ function BatteryState(callback) {
 }
 
 exports.BatteryADC = BatteryADC;
-exports.BatteryProcADC = BatteryProcADC;
-exports.BatteryState = BatteryState;
 exports.BatteryLevel = BatteryLevel;
 exports.BatteryLevelPM = BatteryLevelPM;
+exports.ProcRead = ProcRead;
