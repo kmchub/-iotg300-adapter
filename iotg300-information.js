@@ -57,12 +57,29 @@ function BatteryLevelPM(callback) {
 }
 
 function ProcRead(name, callback) {
-    return new Promise((resolve) => {
+    let value = fs.readFileSync('/proc/iotg300/' + name);
+    return parseInt(value.toString(), 10);
+/*  return new Promise((resolve) => {
         process.nextTick(() => {
             let result = 0;
             fs.readFile('/proc/iotg300/' + name, function (error, stdout) {
                 if (!error) {
                     result = parseInt(stdout.toString(), 10);
+                }
+                if (callback) { callback(result); }
+                resolve(result);
+            });
+        });
+    }); */
+}
+
+function ProcWrite(name, data, callback) {
+    return new Promise((resolve) => {
+        process.nextTick(() => {
+            let result = 0;
+            fs.writeFile('/proc/iotg300/' + name, data, function (error) {
+                if (!error) {
+                    result = 1;
                 }
                 if (callback) { callback(result); }
                 resolve(result);
@@ -75,3 +92,4 @@ exports.BatteryADC = BatteryADC;
 exports.BatteryLevel = BatteryLevel;
 exports.BatteryLevelPM = BatteryLevelPM;
 exports.ProcRead = ProcRead;
+exports.ProcWrite = ProcWrite;
