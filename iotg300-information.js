@@ -88,8 +88,15 @@ function ProcWrite(name, data, callback) {
     });
 }
 
+function iotg_proc(dev, name, data, callback) {
+    exec('/opt/iotg300/iotg_proc.sh ' + name + ' ' + data, function (dev) {
+        if (callback) { callback(dev); }
+    });
+}
+
 exports.BatteryADC = BatteryADC;
 exports.BatteryLevel = BatteryLevel;
 exports.BatteryLevelPM = BatteryLevelPM;
 exports.ProcRead = ProcRead;
 exports.ProcWrite = ProcWrite;
+exports.iotg_proc = iotg_proc;

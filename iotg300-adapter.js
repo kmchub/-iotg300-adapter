@@ -80,7 +80,7 @@ class HitpointAdapter extends Adapter {
 class HitpointProperty extends Property {
   constructor(device, name, propertyDescription) {
     super(device, name, propertyDescription);
-    this.updateValue(propertyDescription.value);
+//    this.updateValue(propertyDescription.value);
   }
 
   /**
@@ -106,6 +106,10 @@ class HitpointProperty extends Property {
 //    this.setCachedValue(value);
 //    this.device.notifyPropertyChanged(this);
     this.setCachedValueAndNotify(value);
+  }
+  notifyReadOnly(value) {
+    this.setReadOnly(value);
+    this.device.notifyPropertyChanged(this);
   }
 }
 
@@ -196,8 +200,12 @@ class HitpointDevice extends Device {
   }
 }
 
-function sleep(time) {
-  return new Promise((resolve) => setTimeout(resolve, time));
+function sleep(time, data) {
+  return new Promise(function (resolve, reject) {
+    setTimeout(function () {
+      resolve(data);
+    }, time);
+  });
 }
 
 class BatteryDevice extends HitpointDevice {
@@ -310,6 +318,7 @@ class DeviceSpeaker extends HitpointDevice {
     this.description = "Speaker device information";
     super.schemasOnOffSwitch();
     this.power = super.createPowerProperty();
+    this.waitStep = 0;
   }
   updateState() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -318,9 +327,22 @@ class DeviceSpeaker extends HitpointDevice {
   }
   notifyPropertyChanged(property) {
     super.notifyPropertyChanged(property);
-    property.getValue().then( value => {
-      si.ProcWrite('CPU_PWR_SPK', (value)?1:0 );
-    });
+    if( this.waitStep == 0 ) {
+      this.waitStep = 1;
+      this.notifyReadOnly(true);
+      property.getValue().then( value => {
+        si.iotg_proc(this, 'CPU_PWR_SPK', (value)?1:0, function (dev) {
+          dev.waitStep = 2;
+          dev.notifyReadOnly(false);
+        });
+      });
+    }
+    if( this.waitStep == 2 ) {
+      this.waitStep = 0;
+    }
+  }
+  notifyReadOnly(value) {
+    this.power.notifyReadOnly(value);
   }
 }
 
@@ -332,6 +354,7 @@ class DeviceAmp extends HitpointDevice {
     super.schemasOnOffSwitch();
     this.power = super.createPowerProperty();
     this.led = super.createColorProperty('LED', 'LED', 'The AMP LED');
+    this.waitStep = 0;
   }
   updateState() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -340,9 +363,22 @@ class DeviceAmp extends HitpointDevice {
   }
   notifyPropertyChanged(property) {
     super.notifyPropertyChanged(property);
-    property.getValue().then( value => {
-      si.ProcWrite('CPU_AMP_PWR', (value)?1:0 );
-    });
+    if( this.waitStep == 0 ) {
+      this.waitStep = 1;
+      this.notifyReadOnly(true);
+      property.getValue().then( value => {
+        si.iotg_proc(this, 'CPU_AMP_PWR', (value)?1:0, function (dev) {
+          dev.waitStep = 2;
+          dev.notifyReadOnly(false);
+        });
+      });
+    }
+    if( this.waitStep == 2 ) {
+      this.waitStep = 0;
+    }
+  }
+  notifyReadOnly(value) {
+    this.power.notifyReadOnly(value);
   }
   poll() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -366,6 +402,7 @@ class Device4G extends HitpointDevice {
     this.description = "4G device information";
     super.schemasOnOffSwitch();
     this.power = super.createPowerProperty();
+    this.waitStep = 0;
   }
   updateState() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -374,9 +411,22 @@ class Device4G extends HitpointDevice {
   }
   notifyPropertyChanged(property) {
     super.notifyPropertyChanged(property);
-    property.getValue().then( value => {
-      si.ProcWrite('CPU_PW_4G', (value)?1:0 );
-    });
+    if( this.waitStep == 0 ) {
+      this.waitStep = 1;
+      this.notifyReadOnly(true);
+      property.getValue().then( value => {
+        si.iotg_proc(this, 'CPU_PW_4G', (value)?1:0, function (dev) {
+          dev.waitStep = 2;
+          dev.notifyReadOnly(false);
+        });
+      });
+    }
+    if( this.waitStep == 2 ) {
+      this.waitStep = 0;
+    }
+  }
+  notifyReadOnly(value) {
+    this.power.notifyReadOnly(value);
   }
 }
 
@@ -388,7 +438,27 @@ class DeviceBle extends HitpointDevice {
     super.schemasOnOffSwitch();
     this.power = super.createPowerProperty();
 
+    this.waitStep = 0;
     super.initEvent('Reset');
+
+    super.initCallbackAction();
+    this.addCallbackAction('reset', 'Reset', 'Reset the module', () => {
+      if( this.waitStep == 0 ) {
+        this.waitStep = 11;
+        this.notifyReadOnly(true);
+        super.notifyEvent('Reset');
+        si.iotg_proc(this, 'CPU_RST_BLE', 0, function (dev) {
+          // si.ProcWrite('CPU_RST_BLE', 0 );
+          sleep(500,dev).then( function (dev) {
+            // si.ProcWrite('CPU_RST_BLE', 1 );
+            si.iotg_proc(dev, 'CPU_RST_BLE', 1, function (dev) {
+              dev.notifyReadOnly(false);
+              dev.waitStep = 0;
+            });
+          })
+        });
+      }
+    });
   }
   updateState() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -397,9 +467,22 @@ class DeviceBle extends HitpointDevice {
   }
   notifyPropertyChanged(property) {
     super.notifyPropertyChanged(property);
-    property.getValue().then( value => {
-      si.ProcWrite('CPU_PW_BLE', (value)?1:0 );
-    });
+    if( this.waitStep == 0 ) {
+      this.waitStep = 1;
+      this.notifyReadOnly(true);
+      property.getValue().then( value => {
+        si.iotg_proc(this, 'CPU_PW_BLE', (value)?1:0, function (dev) {
+          dev.waitStep = 2;
+          dev.notifyReadOnly(false);
+        });
+      });
+    }
+    if( this.waitStep == 2 ) {
+      this.waitStep = 0;
+    }
+  }
+  notifyReadOnly(value) {
+    this.power.notifyReadOnly(value);
   }
 }
 
@@ -411,7 +494,27 @@ class DeviceZigbee extends HitpointDevice {
     super.schemasOnOffSwitch();
     this.power = super.createPowerProperty();
 
+    this.waitStep = 0;
     super.initEvent('Reset');
+
+    super.initCallbackAction();
+    this.addCallbackAction('reset', 'Reset', 'Reset the module', () => {
+      if( this.waitStep == 0 ) {
+        this.waitStep = 11;
+        this.notifyReadOnly(true);
+        super.notifyEvent('Reset');
+        si.iotg_proc(this, 'IO_RST_ZIGBEE', 0, function (dev) {
+          // si.ProcWrite('IO_RST_ZIGBEE', 0 );
+          sleep(500,dev).then( function (dev) {
+            // si.ProcWrite('IO_RST_ZIGBEE', 1 );
+            si.iotg_proc(dev, 'IO_RST_ZIGBEE', 1, function (dev) {
+              dev.notifyReadOnly(false);
+              dev.waitStep = 0;
+            });
+          })
+        });
+      }
+    });
   }
   updateState() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -420,9 +523,22 @@ class DeviceZigbee extends HitpointDevice {
   }
   notifyPropertyChanged(property) {
     super.notifyPropertyChanged(property);
-    property.getValue().then( value => {
-      si.ProcWrite('CPU_PW_ZIG', (value)?1:0 );
-    });
+    if( this.waitStep == 0 ) {
+      this.waitStep = 1;
+      this.notifyReadOnly(true);
+      property.getValue().then( value => {
+        si.iotg_proc(this, 'CPU_PW_ZIG', (value)?1:0, function (dev) {
+          dev.waitStep = 2;
+          dev.notifyReadOnly(false);
+        });
+      });
+    }
+    if( this.waitStep == 2 ) {
+      this.waitStep = 0;
+    }
+  }
+  notifyReadOnly(value) {
+    this.power.notifyReadOnly(value);
   }
 }
 
@@ -434,7 +550,28 @@ class DeviceZwave extends HitpointDevice {
     super.schemasOnOffSwitch();
     this.power = super.createPowerProperty();
 
+    this.waitStep = 0;
     super.initEvent('Reset');
+
+    super.initCallbackAction();
+    this.Reseting = false;
+    this.addCallbackAction('reset', 'Reset', 'Reset the module', () => {
+      if( this.waitStep == 0 ) {
+        this.waitStep = 11;
+        this.notifyReadOnly(true);
+        super.notifyEvent('Reset');
+        si.iotg_proc(this, 'CPU_RST_ZWAVE', 0, function (dev) {
+          // si.ProcWrite('CPU_RST_ZWAVE', 0 );
+          sleep(500,dev).then( function (dev) {
+            // si.ProcWrite('CPU_RST_ZWAVE', 1 );
+            si.iotg_proc(dev, 'CPU_RST_ZWAVE', 1, function (dev) {
+              dev.notifyReadOnly(false);
+              dev.waitStep = 0;
+            });
+          })
+        });
+      }
+    });
   }
   updateState() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -443,9 +580,22 @@ class DeviceZwave extends HitpointDevice {
   }
   notifyPropertyChanged(property) {
     super.notifyPropertyChanged(property);
-    property.getValue().then( value => {
-      si.ProcWrite('CPU_PW_ZWAVE', (value)?1:0 );
-    });
+    if( this.waitStep == 0 ) {
+      this.waitStep = 1;
+      this.notifyReadOnly(true);
+      property.getValue().then( value => {
+        si.iotg_proc(this, 'CPU_PW_ZWAVE', (value)?1:0, function (dev) {
+          dev.waitStep = 2;
+          dev.notifyReadOnly(false);
+        });
+      });
+    }
+    if( this.waitStep == 2 ) {
+      this.waitStep = 0;
+    }
+  }
+  notifyReadOnly(value) {
+    this.power.notifyReadOnly(value);
   }
 }
 
@@ -456,6 +606,7 @@ class DeviceWifi extends HitpointDevice {
     this.description = "Wi-Fi device information";
     super.schemasOnOffSwitch();
     this.power = super.createPowerProperty();
+    this.waitStep = 0;
   }
   updateState() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -464,9 +615,22 @@ class DeviceWifi extends HitpointDevice {
   }
   notifyPropertyChanged(property) {
     super.notifyPropertyChanged(property);
-    property.getValue().then( value => {
-      si.ProcWrite('CPU_PW_WIFI', (value)?1:0 );
-    });
+    if( this.waitStep == 0 ) {
+      this.waitStep = 1;
+      this.notifyReadOnly(true);
+      property.getValue().then( value => {
+        si.iotg_proc(this, 'CPU_PW_WIFI', (value)?1:0, function (dev) {
+          dev.waitStep = 2;
+          dev.notifyReadOnly(false);
+        });
+      });
+    }
+    if( this.waitStep == 2 ) {
+      this.waitStep = 0;
+    }
+  }
+  notifyReadOnly(value) {
+    this.power.notifyReadOnly(value);
   }
 }
 
