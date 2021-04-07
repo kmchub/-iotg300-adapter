@@ -89,7 +89,10 @@ function ProcWrite(name, data, callback) {
 }
 
 function iotg_proc(dev, name, data, callback) {
-    exec('/opt/iotg300/iotg_proc.sh ' + name + ' ' + data, function (dev) {
+    exec('/opt/iotg300/iotg_proc.sh ' + name + ' ' + data, function (error) {
+        if (error) {
+            console.error(error);
+        }
         if (callback) { callback(dev); }
     });
 }
