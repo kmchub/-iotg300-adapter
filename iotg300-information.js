@@ -59,18 +59,6 @@ function BatteryLevelPM(callback) {
 function ProcRead(name, callback) {
     let value = fs.readFileSync('/proc/iotg300/' + name);
     return parseInt(value.toString(), 10);
-/*  return new Promise((resolve) => {
-        process.nextTick(() => {
-            let result = 0;
-            fs.readFile('/proc/iotg300/' + name, function (error, stdout) {
-                if (!error) {
-                    result = parseInt(stdout.toString(), 10);
-                }
-                if (callback) { callback(result); }
-                resolve(result);
-            });
-        });
-    }); */
 }
 
 function ProcWrite(name, data, callback) {
@@ -89,7 +77,7 @@ function ProcWrite(name, data, callback) {
 }
 
 function iotg_proc(dev, name, data, callback) {
-    exec('/opt/iotg300/iotg_proc.sh ' + name + ' ' + data, function (error) {
+    exec('/usr/bin/iotg_proc -f ' + name + ' ' + data, function (error) {
         if (error) {
             console.error(error);
         }

@@ -50,31 +50,6 @@ class HitpointAdapter extends Adapter {
   polling() {
     this.cbPolling.forEach(item => item.poll());
   }
-/* remove
-  initDevicePolling() {
-    this.cbPolling = {};
-  }
-  addDevicePolling(name, callback) {
-    this.cbPolling[name] = callback;
-  }
-  startDevicePolling(interval) {
-    this.polling();
-    setInterval(() => {
-        this.polling();
-    }, interval * 1000);
-  }
-  polling() {
-    console.log('polling start ---------');
-    for (const [name, callback] of Object.entries(this.cbPolling)) {
-      if (callback) {
-        console.log('polling: '+ name);
-        callback();
-      }
-      else {
-        console.warn("HitpointProperty: Unknown callback polling" + name);
-      }
-    }
-  } */
 }
 
 class HitpointProperty extends Property {
@@ -123,7 +98,7 @@ class HitpointDevice extends Device {
     return property;
   }
   schemasOnOffSwitch() {
-    this['@context'] = 'https://iot.mozilla.org/schemas/';
+    this['@context'] = 'https://webthings.io/schemas/';
     this['@type'] = ['OnOffSwitch'];
     this.type = 'boolean';
   }
@@ -213,7 +188,7 @@ class BatteryDevice extends HitpointDevice {
     super(adapter, 'battery');
     this.name = 'Battery';
     this.description = "Battery information";
-    this['@context'] = 'https://iot.mozilla.org/schemas/';
+    this['@context'] = 'https://webthings.io/schemas/';
     this['@type'] = ['MultiLevelSensor', 'ColorControl'];
     this.type = 'integer';
     this.adc = this.createProperty('ADC', {
@@ -289,7 +264,7 @@ class BatteryDevice extends HitpointDevice {
 /*
 static struct gwc_gpio_def gpio_data[] = {
     { 0,    GWC_GPIO_HIGH,  GWC_GPIO_IN,    "RST_SW_BTN",    0 },   //  H   LOW: RST KEY press. (RESET KEY)
-    { 5,    GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "SEL_SIM",       0 },   //  L   LOW: Select SIM2, HIGH: Select SIM1
+*    { 5,    GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "SEL_SIM",       0 },   //  L   LOW: Select SIM2, HIGH: Select SIM1
 *    { 7,    GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "CPU_PW_BLE",    0 },   //  L   LOW: POWER OFF, HIGH: POWER ON
 *    { 8,    GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "CPU_RST_BLE",   0 },   //  L   LOW: Reset, HIGH: Normal Work
 *    { 9,    GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "CPU_PW_4G",     0 },   //  L   LOW: POWER OFF, HIGH: POWER ON
@@ -301,8 +276,8 @@ static struct gwc_gpio_def gpio_data[] = {
 x    { 29,   GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "CPU_PW_ETH",    0 },   //  L   LOW: POWER OFF, HIGH: POWER ON
     { 30,   GWC_GPIO_HIGH,  GWC_GPIO_IN,    "ADAPTER_STATE", 0 },   //  H   LOW: ADAPTER ON, HIGH: ADAPTER OFF,
 *    { 31,   GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "IO_RST_ZIGBEE", 0 },   //  L   LOW: Reset, HIGH: Normal Work
-    { 32,   GWC_GPIO_LOW,   GWC_GPIO_IN,    "SIM1",          0 },   //  L   LOW: unplugged, HIGH: plugin
-    { 33,   GWC_GPIO_LOW,   GWC_GPIO_IN,    "SIM2",          0 },   //  L   LOW: unplugged, HIGH: plugin
+*    { 32,   GWC_GPIO_LOW,   GWC_GPIO_IN,    "SIM1",          0 },   //  L   LOW: unplugged, HIGH: plugin
+*    { 33,   GWC_GPIO_LOW,   GWC_GPIO_IN,    "SIM2",          0 },   //  L   LOW: unplugged, HIGH: plugin
 *    { 39,   GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "CPU_PWR_SPK",   0 },   //  L   LOW: SPEAKER POWER OFF, HIGH: SPEAKER POWER ON
 *    { 40,   GWC_GPIO_HIGH,  GWC_GPIO_IN,    "CPU_AMP_FAULT", 0 },   //  H   LOW: Normal Work, HIGH: AD82011 I2C address Error
 *    { 41,   GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "CPU_AMP_PWR",   0 },   //  L   LOW: POWER OFF, HIGH: POWER ON  (Green LED)
@@ -448,9 +423,7 @@ class DeviceBle extends HitpointDevice {
         this.notifyReadOnly(true);
         super.notifyEvent('Reset');
         si.iotg_proc(this, 'CPU_RST_BLE', 0, function (dev) {
-          // si.ProcWrite('CPU_RST_BLE', 0 );
           sleep(500,dev).then( function (dev) {
-            // si.ProcWrite('CPU_RST_BLE', 1 );
             si.iotg_proc(dev, 'CPU_RST_BLE', 1, function (dev) {
               dev.notifyReadOnly(false);
               dev.waitStep = 0;
@@ -504,9 +477,7 @@ class DeviceZigbee extends HitpointDevice {
         this.notifyReadOnly(true);
         super.notifyEvent('Reset');
         si.iotg_proc(this, 'IO_RST_ZIGBEE', 0, function (dev) {
-          // si.ProcWrite('IO_RST_ZIGBEE', 0 );
           sleep(500,dev).then( function (dev) {
-            // si.ProcWrite('IO_RST_ZIGBEE', 1 );
             si.iotg_proc(dev, 'IO_RST_ZIGBEE', 1, function (dev) {
               dev.notifyReadOnly(false);
               dev.waitStep = 0;
@@ -561,9 +532,7 @@ class DeviceZwave extends HitpointDevice {
         this.notifyReadOnly(true);
         super.notifyEvent('Reset');
         si.iotg_proc(this, 'CPU_RST_ZWAVE', 0, function (dev) {
-          // si.ProcWrite('CPU_RST_ZWAVE', 0 );
           sleep(500,dev).then( function (dev) {
-            // si.ProcWrite('CPU_RST_ZWAVE', 1 );
             si.iotg_proc(dev, 'CPU_RST_ZWAVE', 1, function (dev) {
               dev.notifyReadOnly(false);
               dev.waitStep = 0;
@@ -634,9 +603,82 @@ class DeviceWifi extends HitpointDevice {
   }
 }
 
+class DeviceSim extends HitpointDevice {
+  constructor(adapter) {
+    super(adapter, 'device_sim');
+    this.name = 'Sim Module';
+    this.description = "Sim device information";
+
+    this['@context'] = 'https://webthings.io/schemas/';
+    this['@type'] = ['SelectSimProperty'];
+    this.type = 'string';
+
+    this.sim1 = this.createProperty('SIM1', {
+      '@type': 'BooleanProperty',
+      label: 'SIM1',
+      name: 'sim1',
+      type: 'boolean',
+      value: false,
+      readOnly: true
+    });
+    this.sim2 = this.createProperty('SIM2', {
+      '@type': 'BooleanProperty',
+      label: 'SIM2',
+      name: 'sim2',
+      type: 'boolean',
+      value: false,
+      readOnly: true
+    });
+    this.sim = this.createProperty('SEL', {
+      '@type': 'SelectSimProperty',
+      label: 'Select',
+      name: 'sel',
+      type: 'string',
+      enum: ['SIM1', 'SIM2'],
+      value: 'SIM1',
+      readOnly: false
+    });
+
+    this.waitStep = 0;
+  }
+  updateState() {
+    return __awaiter(this, void 0, void 0, function* () {
+      this.sim.updateValue( si.ProcRead('SEL_SIM')?'SIM1':'SIM2' );
+      this.sim1.updateValue( si.ProcRead('SIM1')?true:false );
+      this.sim2.updateValue( si.ProcRead('SIM2')?true:false );
+    });
+  }
+  notifyPropertyChanged(property) {
+    super.notifyPropertyChanged(property);
+    if( property.getName() == "SEL" ) {
+      if( this.waitStep == 0 ) {
+        this.waitStep = 1;
+        this.notifyReadOnly(true);
+        property.getValue().then( value => {
+          si.iotg_proc(this, 'SEL_SIM', (value=="SIM1")?1:0, function (dev) {
+            dev.waitStep = 2;
+            dev.notifyReadOnly(false);
+          });
+        });
+      }
+      if( this.waitStep == 2 ) {
+        this.waitStep = 0;
+      }
+    }
+  }
+  notifyReadOnly(value) {
+    this.sim.notifyReadOnly(value);
+    this.sim1.notifyReadOnly(value);
+    this.sim2.notifyReadOnly(value);
+  }
+}
+
 class Iotg300Adapter extends HitpointAdapter {
   constructor(addonManager) {
     super(addonManager, 'Iotg300Adapter', manifest.id);
+
+    // 用於等待之前 iotg_proc 執行結束
+    require('child_process').execSync('/usr/bin/iotg_proc');
 
     const db = new Database(this.packageName);
     db.open().then(() => {
@@ -723,6 +765,10 @@ class Iotg300Adapter extends HitpointAdapter {
     this.handleDeviceAdded(devamp);
     devamp.updateState();
   
+    const devsim = new DeviceSim(this);
+    this.handleDeviceAdded(devsim);
+    devsim.updateState();
+
     super.initDevicePolling();
     super.addDevicePolling(battery);
     super.addDevicePolling(devamp);
