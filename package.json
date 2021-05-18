@@ -1,7 +1,7 @@
 {
   "name": "iotg300-adapter",
   "display_name": "IOTG300",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "IOTG300 gateway support",
   "author": "Hitpoint",
   "main": "index.js",

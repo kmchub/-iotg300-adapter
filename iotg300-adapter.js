@@ -183,6 +183,24 @@ function sleep(time, data) {
   });
 }
 
+function componentToHex(c) {
+  var hex = c.toString(16);
+  return hex.length == 1 ? "0" + hex : hex;
+}
+
+function rgbToHex(r, g, b) {
+  return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+}
+
+function hexToRgb(hex) {
+  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+}
+
 class BatteryDevice extends HitpointDevice {
   constructor(adapter) {
     super(adapter, 'battery');
@@ -260,31 +278,6 @@ class BatteryDevice extends HitpointDevice {
     return batadc * 5 / 1024;
   }
 }
-
-/*
-static struct gwc_gpio_def gpio_data[] = {
-    { 0,    GWC_GPIO_HIGH,  GWC_GPIO_IN,    "RST_SW_BTN",    0 },   //  H   LOW: RST KEY press. (RESET KEY)
-*    { 5,    GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "SEL_SIM",       0 },   //  L   LOW: Select SIM2, HIGH: Select SIM1
-*    { 7,    GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "CPU_PW_BLE",    0 },   //  L   LOW: POWER OFF, HIGH: POWER ON
-*    { 8,    GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "CPU_RST_BLE",   0 },   //  L   LOW: Reset, HIGH: Normal Work
-*    { 9,    GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "CPU_PW_4G",     0 },   //  L   LOW: POWER OFF, HIGH: POWER ON
-*    { 23,   GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "CPU_PW_ZIG",    0 },   //  L   LOW: POWER OFF, HIGH: POWER ON
-*    { 24,   GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "CPU_PW_WIFI",   0 },   //  L   LOW: POWER OFF, HIGH: POWER ON
-    { 25,   GWC_GPIO_HIGH,  GWC_GPIO_IN,    "CPU_BAT_STATE", 0 },   //  H   LOW: CHARGING充電中, HIGH: UNCHARGING充飽
-*    { 26,   GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "CPU_PW_ZWAVE",  0 },   //  L   LOW: POWER OFF, HIGH: POWER ON
-    { 28,   GWC_GPIO_HIGH,  GWC_GPIO_IN,    "CPU_KEY_INT",   0 },   //  H   LOW: Normal Work, HIGH: POWER ON (key interrupt)
-x    { 29,   GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "CPU_PW_ETH",    0 },   //  L   LOW: POWER OFF, HIGH: POWER ON
-    { 30,   GWC_GPIO_HIGH,  GWC_GPIO_IN,    "ADAPTER_STATE", 0 },   //  H   LOW: ADAPTER ON, HIGH: ADAPTER OFF,
-*    { 31,   GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "IO_RST_ZIGBEE", 0 },   //  L   LOW: Reset, HIGH: Normal Work
-*    { 32,   GWC_GPIO_LOW,   GWC_GPIO_IN,    "SIM1",          0 },   //  L   LOW: unplugged, HIGH: plugin
-*    { 33,   GWC_GPIO_LOW,   GWC_GPIO_IN,    "SIM2",          0 },   //  L   LOW: unplugged, HIGH: plugin
-*    { 39,   GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "CPU_PWR_SPK",   0 },   //  L   LOW: SPEAKER POWER OFF, HIGH: SPEAKER POWER ON
-*    { 40,   GWC_GPIO_HIGH,  GWC_GPIO_IN,    "CPU_AMP_FAULT", 0 },   //  H   LOW: Normal Work, HIGH: AD82011 I2C address Error
-*    { 41,   GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "CPU_AMP_PWR",   0 },   //  L   LOW: POWER OFF, HIGH: POWER ON  (Green LED)
-    { 42,   GWC_GPIO_HIGH,  GWC_GPIO_IN,    "SOC_PROCHOT",   0 },   //  H
-*    { 43,   GWC_GPIO_HIGH,  GWC_GPIO_OUT,   "CPU_RST_ZWAVE", 0 },   //  L   LOW: Reset, HIGH: Normal Work
-}; BinarySensor  BooleanProperty
-*/
 
 class DeviceSpeaker extends HitpointDevice {
   constructor(adapter) {
@@ -673,6 +666,195 @@ class DeviceSim extends HitpointDevice {
   }
 }
 
+class DeviceColorLight extends HitpointDevice {
+  constructor(adapter) {
+    super(adapter, 'device_color_light');
+    this.name = 'ColorLight';
+    this.description = "ColorLight information";
+
+    this['@context'] = 'https://webthings.io/schemas/';
+    this['@type'] = ['Light', 'ColorControl'];
+    this.type = 'dimmableColorLight';
+
+    this.power_val = false;
+    this.power = super.createPowerProperty();
+    this.power.updateValue(this.power_val);
+
+    this.led = super.createColorProperty('color', 'color', 'The LED color');
+    this.led.readOnly = false;
+    this.led_val = '#000000';
+
+    this.mode_val = 'color';
+    this.colorMode = this.createProperty('colorMode', {
+      label: 'Color Mode',
+      name: 'colorMode',
+      type: 'string',
+      enum: ['color', 'flash', 'alarming', 'alert', 'armed', 'breathing', 'heartbeat', 'tap', 'wating', 'demo0', 'demo1', 'demo2', 'demo3', 'demo4', 'demo5', 'demo6'],
+      value: 'color',
+      readOnly: false
+    });
+
+    this.flash_val = 500;
+    this.flash = this.createProperty('flash', {
+      type: 'integer',
+      title: 'flash',
+      minimum: 20,
+      maximum: 5000,
+      description: 'Flash color speed',
+      value: 500,
+      readOnly: false
+    });
+  }
+  updateState() {
+    return __awaiter(this, void 0, void 0, function* () {
+      this.flash.updateValue( this.flash_val );
+      this.colorMode.updateValue( this.mode_val );
+    });
+  }
+  updateLED() {
+    if ( this.power_val == false ) {
+      si.ProcWrite('cmd','color off');
+    } else {
+      let color = hexToRgb(this.led_val);
+      if (color == null) {
+        color = {
+          r: 0,
+          g: 0,
+          b: 0
+        }
+      }
+      switch (this.mode_val) {
+        case 'color':
+          si.ProcWrite('cmd', 'color '+color.r+' '+color.g+' '+color.b);
+          break;
+        case 'flash':
+          si.ProcWrite('cmd', 'color '+color.r+' '+color.g+' '+color.b);
+          sleep(50,this).then( function (dev) {
+            si.ProcWrite('cmd', 'flash '+dev.flash_val+' '+dev.flash_val);
+          })
+          break;
+        case 'alarming':
+          si.ProcWrite('ring_alarming',color.r+' '+color.g+' '+color.b);
+          break;
+        case 'alert':
+          si.ProcWrite('ring_alert',color.r+' '+color.g+' '+color.b);
+          break;
+        case 'armed':
+          si.ProcWrite('ring_armed',color.r+' '+color.g+' '+color.b);
+          break;
+        case 'breathing':
+          si.ProcWrite('ring_breathing',color.r+' '+color.g+' '+color.b);
+          break;
+        case 'heartbeat':
+          si.ProcWrite('ring_heartbeat',color.r+' '+color.g+' '+color.b);
+          break;
+        case 'tap':
+          si.ProcWrite('ring_tap',color.r+' '+color.g+' '+color.b);
+          break;
+        case 'wating':
+          si.ProcWrite('ring_wating',color.r+' '+color.g+' '+color.b);
+          break;
+        case 'demo0':
+          si.ProcWrite('cmd', 'demo 0');
+          break;
+        case 'demo1':
+          si.ProcWrite('cmd', 'color off');
+          si.ProcWrite('cmd', 'led 0 8 0 0');
+          si.ProcWrite('cmd', 'led 1 16 0 0');
+          si.ProcWrite('cmd', 'led 2 32 0 0');
+          si.ProcWrite('cmd', 'led 3 64 0 0');
+          si.ProcWrite('cmd', 'led 4 96 0 0');
+          si.ProcWrite('cmd', 'led 5 128 0 0');
+          si.ProcWrite('cmd', 'led 6 192 0 0');
+          si.ProcWrite('cmd', 'led 7 255 0 0');
+          sleep(100,this).then( function (dev) {
+            si.ProcWrite('cmd', 'sn 1 '+dev.flash_val);
+          })
+          break;
+        case 'demo2':
+          si.ProcWrite('cmd', 'color off');
+          si.ProcWrite('cmd', 'led 7 0 4 0');
+          si.ProcWrite('cmd', 'led 6 0 8 0');
+          si.ProcWrite('cmd', 'led 5 0 16 0');
+          si.ProcWrite('cmd', 'led 4 0 32 0');
+          si.ProcWrite('cmd', 'led 3 0 64 0');
+          si.ProcWrite('cmd', 'led 2 0 96 0');
+          si.ProcWrite('cmd', 'led 1 0 160 0');
+          si.ProcWrite('cmd', 'led 0 0 255 0');
+          sleep(100,this).then( function (dev) {
+            si.ProcWrite('cmd', 'sp 1 '+dev.flash_val);
+          })
+          break;
+        case 'demo3':
+          si.ProcWrite('cmd', 'demo 3');
+          break;
+        case 'demo4':
+          si.ProcWrite('cmd', 'bgcolor 255 0 0');
+          si.ProcWrite('cmd', 'color 0 0 255');
+          sleep(100,this).then( function (dev) {
+            si.ProcWrite('cmd', 'shine '+dev.flash_val+' '+dev.flash_val);
+          })
+          break;
+        case 'demo5':
+          si.ProcWrite('cmd', 'color off');
+          if ( color.r == 0 && color.g == 0 && color.b == 0 ) {
+            color.g = 255;
+          }
+          let cc = color.r+' '+color.g+' '+color.b;
+          si.ProcWrite('cmd', 'led 0 '+cc);
+          si.ProcWrite('cmd', 'led 2 '+cc);
+          si.ProcWrite('cmd', 'led 4 '+cc);
+          si.ProcWrite('cmd', 'led 6 '+cc);
+          si.ProcWrite('cmd', 'led 8 '+cc);
+          si.ProcWrite('cmd', 'led 10 '+cc);
+          si.ProcWrite('cmd', 'led 12 '+cc);
+          si.ProcWrite('cmd', 'led 14 '+cc);
+          si.ProcWrite('cmd', 'led 16 '+cc);
+          si.ProcWrite('cmd', 'led 18 '+cc);
+          sleep(100,this).then( function (dev) {
+            si.ProcWrite('cmd', 'sn 1 '+dev.flash_val);
+          })
+          break;
+        case 'demo6':
+          si.ProcWrite('cmd', 'color off');
+          si.ProcWrite('cmd', 'led 4 255 0 0');
+          si.ProcWrite('cmd', 'led 9 0 255 0');
+          si.ProcWrite('cmd', 'led 14 0 0 255');
+          si.ProcWrite('cmd', 'led 19 0 255 255');
+          sleep(100,this).then( function (dev) {
+            si.ProcWrite('cmd', 'sp 1 '+dev.flash_val);
+          })
+          break;
+      }
+    }
+  }
+  notifyPropertyChanged(property) {
+    super.notifyPropertyChanged(property);
+    switch (property.getName()) {
+      case 'colorMode':
+        this.mode_val = property.value;
+        // console.log('Mode: ' + property.value );
+        this.updateLED();
+        break;
+      case 'color':
+        this.led_val = property.value;
+        // console.log('Color: ' + property.value );
+        this.updateLED();
+        break;
+      case 'flash':
+        this.flash_val = property.value;
+        // console.log('Flash: ' + property.value );
+        this.updateLED();
+        break;
+      case 'Power':
+        this.power_val = property.value;
+        // console.log('Power: ' + property.value );
+        this.updateLED();
+        break;
+    }
+  }
+}
+
 class Iotg300Adapter extends HitpointAdapter {
   constructor(addonManager) {
     super(addonManager, 'Iotg300Adapter', manifest.id);
@@ -768,6 +950,10 @@ class Iotg300Adapter extends HitpointAdapter {
     const devsim = new DeviceSim(this);
     this.handleDeviceAdded(devsim);
     devsim.updateState();
+
+    const devcolorlight = new DeviceColorLight(this);
+    this.handleDeviceAdded(devcolorlight);
+    devcolorlight.updateState();
 
     super.initDevicePolling();
     super.addDevicePolling(battery);

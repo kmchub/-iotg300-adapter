@@ -62,6 +62,7 @@ function ProcRead(name, callback) {
 }
 
 function ProcWrite(name, data, callback) {
+    // console.log("ProcWrite:"+name+' '+data);
     return new Promise((resolve) => {
         process.nextTick(() => {
             let result = 0;
